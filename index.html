@@ -567,7 +567,7 @@
       <div class="stat-label">Learned</div>
     </div>
     <div class="stat">
-      <div class="stat-num" id="totalWords">280</div>
+      <div class="stat-num" id="totalWords">0</div>
       <div class="stat-label">Words</div>
     </div>
     <div class="stat streak-badge">
@@ -579,6 +579,7 @@
 
 <div class="tabs">
   <button class="tab active" onclick="showView('practice')">Practice</button>
+  <button class="tab" onclick="showView('test')">Test</button>
   <button class="tab" onclick="showView('dictionary')">Dictionary</button>
   <button class="tab" onclick="showView('progress')">Progress</button>
 </div>
@@ -658,6 +659,99 @@
         <div class="results-actions">
           <button class="btn-secondary" onclick="repeatWrong()">Повторить слабые</button>
           <button class="start-btn" onclick="backToSelector()">Ещё раз →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEST VIEW -->
+  <div class="view" id="view-test">
+
+    <!-- Test selector -->
+    <div id="testSelectorState" style="width:100%;">
+      <div style="text-align:center;margin-bottom:28px;">
+        <div style="font-family:'Playfair Display',serif;font-size:1.5rem;margin-bottom:8px;">Проверка знаний</div>
+        <div style="color:var(--muted);font-size:0.85rem;line-height:1.6;">Тебе показывают перевод + предложение с пропуском.<br>Ты вводишь слово на английском — без подсказок.</div>
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:28px;">
+        <button class="btn-secondary" id="testModeAll" onclick="setTestMode('all')" style="border-color:var(--accent);color:var(--accent);">Все слова</button>
+        <button class="btn-secondary" id="testModeWeak" onclick="setTestMode('weak')">Только слабые 🔴</button>
+        <button class="btn-secondary" id="testModeLearned" onclick="setTestMode('learned')">Хорошо знаю 🟢</button>
+      </div>
+      <div style="text-align:center;">
+        <button class="start-btn" onclick="startTest()">Начать тест →</button>
+      </div>
+    </div>
+
+    <!-- Test question state -->
+    <div id="testQuestionState" style="width:100%;display:none;">
+      <button class="back-btn" onclick="confirmTestBack()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        В меню
+      </button>
+      <div class="progress-wrap"><div class="progress-bar" id="testProgressBar"></div></div>
+      <div class="card-counter" id="testCounter">1 / 20</div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;width:100%;margin-bottom:20px;">
+        <div id="testTag" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--muted);background:var(--bg);padding:4px 12px;border-radius:20px;border:1px solid var(--border);display:inline-block;margin-bottom:20px;"></div>
+
+        <!-- Russian word -->
+        <div style="font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--accent);margin-bottom:8px;" id="testRuWord"></div>
+
+        <!-- Sentence with gap -->
+        <div style="font-size:0.9rem;color:var(--muted);margin-bottom:24px;line-height:1.7;padding:14px;background:var(--bg);border-radius:8px;border-left:2px solid var(--border);" id="testSentence"></div>
+
+        <!-- Input -->
+        <div style="position:relative;">
+          <input
+            id="testInput"
+            type="text"
+            placeholder="Введи слово на английском..."
+            autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+            style="width:100%;padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Mono',monospace;font-size:1rem;outline:none;transition:border-color 0.2s;"
+            oninput="onTestInput()"
+            onkeydown="onTestKey(event)"
+          >
+          <div id="testInputHint" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:0.7rem;color:var(--muted);">Enter ↵</div>
+        </div>
+
+        <!-- Feedback -->
+        <div id="testFeedback" style="display:none;margin-top:16px;padding:14px 18px;border-radius:10px;font-size:0.88rem;"></div>
+      </div>
+
+      <!-- Next button (shown after answer) -->
+      <div style="display:flex;gap:12px;width:100%;">
+        <button id="testNextBtn" onclick="nextTestQuestion()" style="display:none;" class="start-btn" style="width:100%;">Следующее →</button>
+        <button id="testSkipBtn" onclick="skipTestQuestion()" class="btn-secondary">Пропустить</button>
+      </div>
+    </div>
+
+    <!-- Test results -->
+    <div id="testResultsState" style="display:none;width:100%;">
+      <div class="results-box">
+        <div class="results-title" id="testResultsTitle">Тест завершён!</div>
+        <div class="results-sub" id="testResultsSub"></div>
+        <div class="results-grid" style="gap:24px;">
+          <div>
+            <div class="result-num green" id="testCorrectCount">0</div>
+            <div class="result-label">Правильно</div>
+          </div>
+          <div>
+            <div class="result-num" style="color:var(--accent);" id="testPartialCount">0</div>
+            <div class="result-label">Почти верно</div>
+          </div>
+          <div>
+            <div class="result-num red" id="testWrongCount">0</div>
+            <div class="result-label">Ошибка</div>
+          </div>
+        </div>
+
+        <!-- Mistakes list -->
+        <div id="testMistakesList" style="margin-top:20px;text-align:left;max-height:280px;overflow-y:auto;"></div>
+
+        <div class="results-actions" style="margin-top:24px;">
+          <button class="btn-secondary" onclick="backToTestSelector()">← В меню теста</button>
+          <button class="start-btn" onclick="startTest()">Ещё раз →</button>
         </div>
       </div>
     </div>
@@ -878,8 +972,15 @@ const STORAGE_KEY = 'vocabTrainer_v2';
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : { known: {}, lastStudied: null, streak: 0, lastStreakDate: null };
-  } catch { return { known: {}, lastStudied: null, streak: 0, lastStreakDate: null }; }
+    const s = raw ? JSON.parse(raw) : {};
+    return {
+      known: s.known || {},
+      testCorrect: s.testCorrect || {},
+      lastStudied: s.lastStudied || null,
+      streak: s.streak || 0,
+      lastStreakDate: s.lastStreakDate || null
+    };
+  } catch { return { known: {}, testCorrect: {}, lastStudied: null, streak: 0, lastStreakDate: null }; }
 }
 
 function saveState() {
@@ -1155,8 +1256,8 @@ function renderDict() {
     items.forEach(v => {
       const item = document.createElement('div');
       item.className = 'dict-item';
-      const knownLevel = state.known[v.id] || 0;
-      const dot = knownLevel >= 2 ? '🟢' : knownLevel === 1 ? '🟡' : '🔴';
+      const knownLevel = state.testCorrect[v.id] || 0;
+      const dot = knownLevel >= 5 ? '🟢' : knownLevel >= 2 ? '🟡' : '🔴';
       item.innerHTML = `<div class="dict-en">${dot} ${v.en}</div><div class="dict-ru">${v.ru}</div>`;
       secDiv.appendChild(item);
     });
@@ -1173,8 +1274,8 @@ function renderDict() {
 // ═══════════════════════════════════════════════════════════
 
 function renderProgress() {
-  const known = VOCAB.filter(v => (state.known[v.id] || 0) >= 2).length;
-  const pct = Math.round((known / VOCAB.length) * 100);
+  const learned = VOCAB.filter(v => (state.testCorrect[v.id] || 0) >= 5).length;
+  const pct = Math.round((learned / VOCAB.length) * 100);
   document.getElementById('progressPercent').textContent = pct + '%';
 
   const container = document.getElementById('progressSections');
@@ -1182,15 +1283,15 @@ function renderProgress() {
 
   sections.forEach(sec => {
     const words = VOCAB.filter(v => v.section === sec);
-    const secKnown = words.filter(v => (state.known[v.id] || 0) >= 2).length;
-    const secPct = Math.round((secKnown / words.length) * 100);
+    const secLearned = words.filter(v => (state.testCorrect[v.id] || 0) >= 5).length;
+    const secPct = Math.round((secLearned / words.length) * 100);
 
     const div = document.createElement('div');
     div.style.cssText = 'padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:10px;';
     div.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <span style="font-size:0.82rem;">${sec}</span>
-        <span style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--muted);">${secKnown}/${words.length}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--muted);">${secLearned}/${words.length}</span>
       </div>
       <div style="height:4px;background:var(--border);border-radius:2px;">
         <div style="height:100%;width:${secPct}%;background:${secPct===100?'var(--success)':'var(--accent)'};border-radius:2px;transition:width 0.5s ease;"></div>
@@ -1203,17 +1304,297 @@ function renderProgress() {
 }
 
 function updateHeaderStats() {
-  const known = VOCAB.filter(v => (state.known[v.id] || 0) >= 2).length;
-  document.getElementById('totalLearned').textContent = known;
+  const learned = VOCAB.filter(v => (state.testCorrect[v.id] || 0) >= 5).length;
+  document.getElementById('totalLearned').textContent = learned;
+  document.getElementById('totalWords').textContent = VOCAB.length;
   document.getElementById('streakCount').textContent = state.streak || 0;
 }
 
 function resetProgress() {
   if (!confirm('Сбросить весь прогресс? Это действие необратимо.')) return;
-  state = { known: {}, lastStudied: null, streak: 0, lastStreakDate: null };
+  state = { known: {}, testCorrect: {}, lastStudied: null, streak: 0, lastStreakDate: null };
   saveState();
   renderProgress();
   updateHeaderStats();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TEST MODE
+// ═══════════════════════════════════════════════════════════
+
+let testMode = 'all';
+let testCards = [];
+let testIdx = 0;
+let testCorrect = 0;
+let testPartial = 0;
+let testWrong = 0;
+let testMistakes = [];
+let testAnswered = false;
+
+function setTestMode(mode) {
+  testMode = mode;
+  document.querySelectorAll('#testSelectorState .btn-secondary').forEach(b => {
+    b.style.borderColor = '';
+    b.style.color = '';
+  });
+  const btn = document.getElementById('testMode' + mode.charAt(0).toUpperCase() + mode.slice(1));
+  if (btn) { btn.style.borderColor = 'var(--accent)'; btn.style.color = 'var(--accent)'; }
+}
+
+function startTest() {
+  let pool;
+  if (testMode === 'weak') pool = VOCAB.filter(v => (state.testCorrect[v.id] || 0) < 5);
+  else if (testMode === 'learned') pool = VOCAB.filter(v => (state.testCorrect[v.id] || 0) >= 5);
+  else pool = [...VOCAB];
+
+  if (!pool.length) { alert('Нет слов в этой категории!'); return; }
+
+  testCards = shuffle(pool).slice(0, 20);
+  testIdx = 0; testCorrect = 0; testPartial = 0; testWrong = 0; testMistakes = [];
+
+  document.getElementById('testSelectorState').style.display = 'none';
+  document.getElementById('testResultsState').style.display = 'none';
+  document.getElementById('testQuestionState').style.display = 'block';
+  renderTestQuestion();
+}
+
+function renderTestQuestion() {
+  testAnswered = false;
+  const card = testCards[testIdx];
+  const total = testCards.length;
+  const pct = (testIdx / total) * 100;
+
+  document.getElementById('testProgressBar').style.width = pct + '%';
+  document.getElementById('testCounter').textContent = `${testIdx + 1} / ${total}`;
+  document.getElementById('testTag').textContent = card.section;
+  document.getElementById('testRuWord').textContent = card.ru.replace(' ⚠️', '').split('(')[0].trim();
+
+  // Build sentence with blank: pick a random example, replace the answer with ___
+  const ex = card.ex && card.ex.length ? card.ex[Math.floor(Math.random() * card.ex.length)] : null;
+  if (ex) {
+    // Find the first English word from the answer in the sentence and blank it
+    const answerWords = getAnswerWords(card.en);
+    let sentence = ex[0];
+    let blanked = false;
+    for (const w of answerWords) {
+      const regex = new RegExp('\\b' + escapeRegex(w) + '\\b', 'i');
+      if (regex.test(sentence)) {
+        sentence = sentence.replace(regex, '<span style="color:var(--accent);font-weight:600;">___</span>');
+        blanked = true;
+        break;
+      }
+    }
+    document.getElementById('testSentence').innerHTML = blanked
+      ? `"${sentence}"<div style="margin-top:6px;font-size:0.75rem;color:var(--muted);">${ex[1]}</div>`
+      : `"${sentence}"<div style="margin-top:6px;font-size:0.75rem;color:var(--muted);">${ex[1]}</div>`;
+  } else {
+    document.getElementById('testSentence').innerHTML = '<span style="color:var(--muted);font-style:italic;">Введи слово по переводу</span>';
+  }
+
+  // Reset input
+  const input = document.getElementById('testInput');
+  input.value = '';
+  input.style.borderColor = 'var(--border)';
+  input.disabled = false;
+  input.focus();
+
+  document.getElementById('testFeedback').style.display = 'none';
+  document.getElementById('testNextBtn').style.display = 'none';
+  document.getElementById('testSkipBtn').style.display = 'block';
+}
+
+function getAnswerWords(en) {
+  // Extract meaningful words from the English answer for blanking
+  const cleaned = en.replace(/[⚠️\(\)\/,\.!?]/g, ' ').replace(/\s+/g, ' ').trim();
+  // Return words sorted by length desc (prefer longer matches)
+  return cleaned.split(' ')
+    .filter(w => w.length > 2 && !['the','and','not','for','with','from','that','this','are','was','you','can','also'].includes(w.toLowerCase()))
+    .sort((a, b) => b.length - a.length);
+}
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function onTestInput() {
+  if (testAnswered) return;
+  const input = document.getElementById('testInput');
+  input.style.borderColor = 'var(--border)';
+  document.getElementById('testFeedback').style.display = 'none';
+}
+
+function onTestKey(e) {
+  if (e.key === 'Enter') {
+    if (testAnswered) { nextTestQuestion(); }
+    else { submitTestAnswer(); }
+  }
+}
+
+function submitTestAnswer() {
+  if (testAnswered) return;
+  const input = document.getElementById('testInput');
+  const userAnswer = input.value.trim();
+  if (!userAnswer) return;
+
+  testAnswered = true;
+  input.disabled = true;
+
+  const card = testCards[testIdx];
+  const result = checkAnswer(userAnswer, card.en);
+
+  const feedback = document.getElementById('testFeedback');
+  feedback.style.display = 'block';
+
+  if (result === 'correct') {
+    input.style.borderColor = 'var(--success)';
+    state.testCorrect[card.id] = (state.testCorrect[card.id] || 0) + 1;
+    const progress = state.testCorrect[card.id];
+    const learned = progress >= 5;
+    feedback.style.background = 'rgba(126,184,164,0.1)';
+    feedback.style.border = '1px solid rgba(126,184,164,0.3)';
+    feedback.style.color = 'var(--success)';
+    const progressBar = '█'.repeat(Math.min(progress, 5)) + '░'.repeat(Math.max(0, 5 - progress));
+    feedback.innerHTML = learned
+      ? `✓ Верно! <strong>${card.en}</strong> — <span style="color:var(--accent)">🏆 Слово выучено!</span>`
+      : `✓ Верно! <strong>${card.en}</strong> <span style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--muted);margin-left:8px;">[${progressBar}] ${progress}/5</span>`;
+    testCorrect++;
+  } else if (result === 'partial') {
+    input.style.borderColor = 'var(--accent)';
+    feedback.style.background = 'rgba(200,169,110,0.1)';
+    feedback.style.border = '1px solid rgba(200,169,110,0.3)';
+    feedback.style.color = 'var(--accent)';
+    feedback.innerHTML = `~ Почти! Правильный ответ: <strong>${card.en}</strong>`;
+    testPartial++;
+    testMistakes.push({ card, userAnswer, type: 'partial' });
+  } else {
+    input.style.borderColor = 'var(--danger)';
+    feedback.style.background = 'rgba(217,123,107,0.1)';
+    feedback.style.border = '1px solid rgba(217,123,107,0.3)';
+    feedback.style.color = 'var(--danger)';
+    const progress = state.testCorrect[card.id] || 0;
+    const progressBar = '█'.repeat(Math.min(progress, 5)) + '░'.repeat(Math.max(0, 5 - progress));
+    feedback.innerHTML = `✗ Неверно. Правильный ответ: <strong>${card.en}</strong> <span style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--muted);margin-left:8px;">[${progressBar}] ${progress}/5</span>`;
+    state.testCorrect[card.id] = Math.max(0, (state.testCorrect[card.id] || 0) - 1); // штраф -1
+    testWrong++;
+    testMistakes.push({ card, userAnswer, type: 'wrong' });
+  }
+
+  saveState();
+  document.getElementById('testNextBtn').style.display = 'inline-flex';
+  document.getElementById('testSkipBtn').style.display = 'none';
+}
+
+function checkAnswer(userAnswer, correctAnswer) {
+  const normalize = s => s.toLowerCase()
+    .replace(/[^a-zа-яё\s]/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const user = normalize(userAnswer);
+  const correct = normalize(correctAnswer);
+
+  // Exact match
+  if (user === correct) return 'correct';
+
+  // Check if user answer matches any of the variants (split by / or ,)
+  const variants = correct.split(/[\/,]/).map(v => normalize(v));
+  if (variants.some(v => v === user)) return 'correct';
+
+  // Check if the main word matches (first word or most significant part)
+  const mainWord = variants[0].split(' ').find(w => w.length > 3) || variants[0].split(' ')[0];
+  if (user.includes(mainWord) || mainWord.includes(user)) return 'partial';
+
+  // Levenshtein distance for typo tolerance
+  for (const v of variants) {
+    const dist = levenshtein(user, v);
+    if (dist <= 2 && v.length > 4) return 'partial';
+    if (dist === 0) return 'correct';
+  }
+
+  // Check if user typed just one word from multi-word answer
+  const correctWords = correct.split(' ').filter(w => w.length > 3);
+  if (correctWords.some(w => user === w)) return 'partial';
+
+  return 'wrong';
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m+1}, (_, i) => Array.from({length: n+1}, (_, j) => i === 0 ? j : j === 0 ? i : 0));
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function skipTestQuestion() {
+  const card = testCards[testIdx];
+  testWrong++;
+  testMistakes.push({ card, userAnswer: '(пропущено)', type: 'wrong' });
+  state.known[card.id] = 0;
+  saveState();
+  testIdx++;
+  if (testIdx >= testCards.length) { showTestResults(); return; }
+  renderTestQuestion();
+}
+
+function nextTestQuestion() {
+  testIdx++;
+  if (testIdx >= testCards.length) { showTestResults(); return; }
+  renderTestQuestion();
+}
+
+function showTestResults() {
+  document.getElementById('testQuestionState').style.display = 'none';
+  document.getElementById('testResultsState').style.display = 'block';
+
+  const total = testCards.length;
+  const pct = Math.round(((testCorrect + testPartial * 0.5) / total) * 100);
+  let title = '📚 Нужно больше практики!';
+  if (pct === 100) title = '🏆 Идеально!';
+  else if (pct >= 80) title = '🎉 Отличный результат!';
+  else if (pct >= 60) title = '👍 Хорошая работа!';
+  else if (pct >= 40) title = '💪 Продолжай в том же духе!';
+
+  document.getElementById('testResultsTitle').textContent = title;
+  document.getElementById('testResultsSub').textContent = `${pct}% — ${testCorrect} правильно, ${testPartial} почти, ${testWrong} ошибок из ${total}`;
+  document.getElementById('testCorrectCount').textContent = testCorrect;
+  document.getElementById('testPartialCount').textContent = testPartial;
+  document.getElementById('testWrongCount').textContent = testWrong;
+
+  // Mistakes list
+  const list = document.getElementById('testMistakesList');
+  list.innerHTML = '';
+  if (testMistakes.length) {
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:10px;';
+    title.textContent = 'Разбор ошибок:';
+    list.appendChild(title);
+    testMistakes.forEach(({ card, userAnswer, type }) => {
+      const div = document.createElement('div');
+      div.style.cssText = `padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:0.82rem;background:${type==='wrong'?'rgba(217,123,107,0.08)':'rgba(200,169,110,0.08)'};border:1px solid ${type==='wrong'?'rgba(217,123,107,0.2)':'rgba(200,169,110,0.2)'};`;
+      div.innerHTML = `
+        <div style="color:var(--text);margin-bottom:3px;"><strong>${card.ru.replace(' ⚠️','').split('(')[0].trim()}</strong></div>
+        <div style="color:var(--muted);">Ты написал: <span style="color:${type==='wrong'?'var(--danger)':'var(--accent)'};">${userAnswer}</span></div>
+        <div style="color:var(--muted);">Правильно: <span style="color:var(--success);">${card.en}</span></div>
+      `;
+      list.appendChild(div);
+    });
+  }
+
+  updateHeaderStats();
+}
+
+function confirmTestBack() {
+  if (testIdx === 0 || confirm('Вернуться в меню? Прогресс текущего теста не сохранится.')) {
+    backToTestSelector();
+  }
+}
+
+function backToTestSelector() {
+  document.getElementById('testQuestionState').style.display = 'none';
+  document.getElementById('testResultsState').style.display = 'none';
+  document.getElementById('testSelectorState').style.display = 'block';
 }
 
 // ═══════════════════════════════════════════════════════════

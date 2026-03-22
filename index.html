@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vocab Trainer</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e12;
+    --surface: #17171f;
+    --card: #1e1e28;
+    --border: #2a2a38;
+    --accent: #c8a96e;
+    --accent2: #7eb8a4;
+    --text: #e8e6e0;
+    --muted: #7a7880;
+    --danger: #d97b6b;
+    --success: #7eb8a4;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.4;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+  }
+
+  .logo span { color: var(--muted); font-style: italic; font-size: 0.85rem; }
+
+  .stats-bar {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.4rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 2px;
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    padding: 0 32px;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    padding: 14px 20px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── MAIN ── */
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+  }
+
+  /* ── VIEWS ── */
+  .view { display: none; width: 100%; max-width: 720px; }
+  .view.active { display: flex; flex-direction: column; align-items: center; }
+
+  /* ── SECTION SELECTOR ── */
+  .section-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    width: 100%;
+    max-width: 720px;
+    margin-bottom: 24px;
+  }
+
+  .section-pill {
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: var(--muted);
+    transition: all 0.15s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .section-pill:hover { border-color: var(--accent); color: var(--text); }
+  .section-pill.selected { background: var(--card); border-color: var(--accent); color: var(--accent); }
+  .section-pill .pill-count { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--muted); }
+
+  .start-btn {
+    margin-top: 8px;
+    padding: 14px 48px;
+    background: var(--accent);
+    color: #0e0e12;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+  }
+
+  .start-btn:hover { background: #d4b87a; transform: translateY(-1px); }
+  .start-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* ── FLASHCARD ── */
+  .card-area {
+    width: 100%;
+    perspective: 1200px;
+    margin-bottom: 28px;
+  }
+
+  .card-inner {
+    width: 100%;
+    min-height: 320px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+  }
+
+  .card-inner.flipped { transform: rotateY(180deg); }
+
+  .card-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 36px;
+    gap: 12px;
+  }
+
+  .card-face.back {
+    transform: rotateY(180deg);
+    background: var(--surface);
+    border-color: var(--accent);
+  }
+
+  .card-tag {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    position: absolute;
+    top: 20px;
+    left: 20px;
+  }
+
+  .card-hint {
+    font-size: 0.7rem;
+    color: var(--muted);
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .flip-icon {
+    width: 14px;
+    height: 14px;
+    opacity: 0.5;
+  }
+
+  .card-word {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    text-align: center;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .card-translation {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.4rem, 3.5vw, 2rem);
+    text-align: center;
+    color: var(--accent);
+    line-height: 1.3;
+  }
+
+  .card-examples {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .example {
+    padding: 10px 14px;
+    background: var(--bg);
+    border-radius: 8px;
+    border-left: 2px solid var(--accent2);
+  }
+
+  .example .en {
+    font-size: 0.82rem;
+    color: var(--text);
+    margin-bottom: 3px;
+    font-style: italic;
+  }
+
+  .example .ru {
+    font-size: 0.76rem;
+    color: var(--muted);
+  }
+
+  .warning-box {
+    padding: 8px 14px;
+    background: rgba(200, 169, 110, 0.08);
+    border: 1px solid rgba(200, 169, 110, 0.2);
+    border-radius: 8px;
+    font-size: 0.75rem;
+    color: var(--accent);
+    width: 100%;
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-bottom: 20px;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  .card-counter {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── ANSWER BUTTONS ── */
+  .answer-btns {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .btn-know, .btn-forget {
+    flex: 1;
+    padding: 14px;
+    border: 1px solid;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.02em;
+  }
+
+  .btn-forget {
+    background: transparent;
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  .btn-forget:hover { background: rgba(217, 123, 107, 0.1); transform: translateY(-1px); }
+
+  .btn-know {
+    background: transparent;
+    border-color: var(--success);
+    color: var(--success);
+  }
+
+  .btn-know:hover { background: rgba(126, 184, 164, 0.1); transform: translateY(-1px); }
+
+  .answer-btns.hidden { opacity: 0; pointer-events: none; }
+
+  /* Flip prompt */
+  .flip-prompt {
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: -12px;
+    margin-bottom: 8px;
+    transition: opacity 0.2s;
+  }
+
+  /* ── RESULTS ── */
+  .results-box {
+    text-align: center;
+    padding: 48px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+  }
+
+  .results-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .results-sub {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 32px;
+  }
+
+  .results-grid {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+
+  .result-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 2.4rem;
+    line-height: 1;
+  }
+
+  .result-num.green { color: var(--success); }
+  .result-num.red { color: var(--danger); }
+
+  .result-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .results-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .btn-secondary {
+    padding: 10px 24px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-secondary:hover { border-color: var(--text); color: var(--text); }
+
+  /* ── DICTIONARY VIEW ── */
+  .dict-search {
+    width: 100%;
+    padding: 12px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    margin-bottom: 20px;
+    transition: border-color 0.2s;
+  }
+
+  .dict-search:focus { border-color: var(--accent); }
+  .dict-search::placeholder { color: var(--muted); }
+
+  .dict-section { width: 100%; margin-bottom: 24px; }
+
+  .dict-section-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dict-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .dict-item {
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-items: start;
+  }
+
+  .dict-en {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--text);
+  }
+
+  .dict-ru {
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .dict-list { width: 100%; max-height: 60vh; overflow-y: auto; padding-right: 4px; }
+  .dict-list::-webkit-scrollbar { width: 4px; }
+  .dict-list::-webkit-scrollbar-track { background: var(--bg); }
+  .dict-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── STREAK ── */
+  .streak-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--accent);
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    header { padding: 16px 20px; }
+    .stats-bar { gap: 16px; }
+    .tabs { padding: 0 20px; }
+    .tab { padding: 12px 14px; font-size: 0.72rem; }
+    main { padding: 24px 16px; }
+    .card-face { padding: 28px 22px; }
+  }
+
+  /* ── BACK BUTTON ── */
+  .back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 20px;
+    align-self: flex-start;
+  }
+  .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .back-btn svg { width: 14px; height: 14px; }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .view.active { animation: fadeIn 0.3s ease; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Vocab Trainer <span>/ English B1–B2</span></div>
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-num" id="totalLearned">0</div>
+      <div class="stat-label">Learned</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="totalWords">280</div>
+      <div class="stat-label">Words</div>
+    </div>
+    <div class="stat streak-badge">
+      🔥 <span id="streakCount">0</span>
+      <div class="stat-label" style="display:inline;margin-left:2px;">days</div>
+    </div>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showView('practice')">Practice</button>
+  <button class="tab" onclick="showView('dictionary')">Dictionary</button>
+  <button class="tab" onclick="showView('progress')">Progress</button>
+</div>
+
+<main>
+
+  <!-- PRACTICE VIEW -->
+  <div class="view active" id="view-practice">
+    <!-- Section selector state -->
+    <div id="selectorState" style="width:100%">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-family:'Playfair Display',serif;font-size:1.5rem;margin-bottom:8px;">Что будем учить?</div>
+        <div style="color:var(--muted);font-size:0.85rem;">Выбери темы или нажми «Всё» для полного словаря</div>
+      </div>
+      <div class="section-grid" id="sectionGrid"></div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:8px;flex-wrap:wrap;">
+        <button class="btn-secondary" onclick="selectAll()">Выбрать всё</button>
+        <button class="btn-secondary" onclick="selectWeak()">Только слабые 🔴</button>
+        <button class="start-btn" id="startBtn" onclick="startSession()" disabled>Начать →</button>
+      </div>
+    </div>
+
+    <!-- Card state (hidden initially) -->
+    <div id="cardState" style="width:100%;display:none;">
+      <button class="back-btn" onclick="confirmBack()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        В меню
+      </button>
+      <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="card-counter" id="cardCounter">1 / 20</div>
+
+      <div class="card-area" onclick="flipCard()">
+        <div class="card-inner" id="cardInner">
+          <div class="card-face front">
+            <div class="card-tag" id="cardTag">🎬 Кино</div>
+            <div class="card-word" id="cardWord">the plot</div>
+            <div class="card-hint">
+              <svg class="flip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+              нажми чтобы перевернуть
+            </div>
+          </div>
+          <div class="card-face back">
+            <div class="card-tag" id="cardTagBack">🎬 Кино</div>
+            <div class="card-translation" id="cardTranslation">сюжет</div>
+            <div class="card-examples" id="cardExamples"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-prompt" id="flipPrompt">← нажми на карточку, чтобы увидеть перевод</div>
+
+      <div class="answer-btns hidden" id="answerBtns">
+        <button class="btn-forget" onclick="answer(false)">❌ Не знаю</button>
+        <button class="btn-know" onclick="answer(true)">✓ Знаю</button>
+      </div>
+    </div>
+
+    <!-- Results state -->
+    <div id="resultsState" style="display:none;width:100%;">
+      <button class="back-btn" onclick="backToSelector()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        В меню
+      </button>
+      <div class="results-box">
+        <div class="results-title" id="resultsTitle">Сессия завершена!</div>
+        <div class="results-sub" id="resultsSub"></div>
+        <div class="results-grid">
+          <div>
+            <div class="result-num green" id="knownCount">0</div>
+            <div class="result-label">Знаю</div>
+          </div>
+          <div>
+            <div class="result-num red" id="forgotCount">0</div>
+            <div class="result-label">Повторить</div>
+          </div>
+        </div>
+        <div class="results-actions">
+          <button class="btn-secondary" onclick="repeatWrong()">Повторить слабые</button>
+          <button class="start-btn" onclick="backToSelector()">Ещё раз →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DICTIONARY VIEW -->
+  <div class="view" id="view-dictionary">
+    <input class="dict-search" type="text" placeholder="Поиск слова..." id="dictSearch" oninput="renderDict()">
+    <div class="dict-list" id="dictList"></div>
+  </div>
+
+  <!-- PROGRESS VIEW -->
+  <div class="view" id="view-progress">
+    <div style="width:100%;text-align:center;margin-bottom:32px;">
+      <div style="font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--accent);margin-bottom:4px;" id="progressPercent">0%</div>
+      <div style="color:var(--muted);font-size:0.85rem;">слов ты хорошо знаешь</div>
+    </div>
+    <div id="progressSections" style="width:100%;display:flex;flex-direction:column;gap:12px;"></div>
+    <div style="margin-top:24px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn-secondary" onclick="resetProgress()">Сбросить прогресс</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════════
+
+const VOCAB = [
+  // 🎬 КИНО
+  { id:1, section:"🎬 Кино и фильмы", en:"the plot", ru:"сюжет", ex:[["The plot of this film is very unpredictable.","Сюжет этого фильма очень непредсказуем."],["The plot has many twists and turns.","В сюжете много неожиданных поворотов."]] },
+  { id:2, section:"🎬 Кино и фильмы", en:"the cast", ru:"актёрский состав", ex:[["The cast of this film is incredible.","Актёрский состав этого фильма невероятный."],["They announced the cast of the new film.","Они объявили актёрский состав нового фильма."]] },
+  { id:3, section:"🎬 Кино и фильмы", en:"a director", ru:"режиссёр", ex:[["My favourite director is Christopher Nolan.","Мой любимый режиссёр — Кристофер Нолан."],["The director spent three years making this film.","Режиссёр потратил три года на создание фильма."]] },
+  { id:4, section:"🎬 Кино и фильмы", en:"dubbing", ru:"дубляж / озвучка", ex:[["I prefer subtitles to dubbing.","Я предпочитаю субтитры дубляжу."],["The dubbing in this cartoon is really good.","Озвучка в этом мультфильме очень хорошая."]] },
+  { id:5, section:"🎬 Кино и фильмы", en:"a script / a scriptwriter", ru:"сценарий / сценарист", ex:[["The script was written by the director himself.","Сценарий написал сам режиссёр."],["She works as a scriptwriter for a TV show.","Она работает сценаристом в телешоу."]] },
+  { id:6, section:"🎬 Кино и фильмы", en:"a title", ru:"название (фильма)", ex:[["I forgot the title of that film.","Я забыл название этого фильма."],["The title doesn't reflect the plot at all.","Название совсем не отражает сюжет."]] },
+  { id:7, section:"🎬 Кино и фильмы", en:"an episode / a season / a series", ru:"серия / сезон / сериал", ex:[["I watched three episodes last night.","Я посмотрел три серии прошлой ночью."],["The second season was much better than the first.","Второй сезон был намного лучше первого."]] },
+  { id:8, section:"🎬 Кино и фильмы", en:"to release (a film)", ru:"выпустить (фильм)", ex:[["The film was released in 2023.","Фильм вышел в 2023 году."],["When was this series released?","Когда вышел этот сериал?"]] },
+  { id:9, section:"🎬 Кино и фильмы", en:"there are a lot of twists and turns", ru:"много сюжетных поворотов", ex:[["I love this thriller — there are a lot of twists and turns.","Я люблю этот триллер: много неожиданных поворотов."],["The plot has so many twists it's hard to predict the ending.","Сюжет настолько непредсказуем, что сложно угадать финал."]] },
+  { id:10, section:"🎬 Кино и фильмы", en:"seldom / rarely", ru:"редко", ex:[["I seldom watch horror films.","Я редко смотрю фильмы ужасов."],["She rarely goes to the cinema anymore.","Она больше редко ходит в кино."]] },
+  { id:11, section:"🎬 Кино и фильмы", en:"fictional", ru:"вымышленный", ex:[["The story is fictional but feels very real.","История вымышленная, но ощущается очень реальной."],["All characters in this film are fictional.","Все персонажи в этом фильме вымышленные."]] },
+  { id:12, section:"🎬 Кино и фильмы", en:"a biopic", ru:"байопик (фильм о реальном человеке)", ex:[["I watched a biopic about Freddie Mercury.","Я посмотрел байопик о Фредди Меркьюри."]] },
+  { id:13, section:"🎬 Кино и фильмы", en:"a period drama", ru:"историческая драма", ex:[['"Downton Abbey" is a famous British period drama.','"Аббатство Даунтон" — знаменитая британская историческая драма.']] },
+  { id:14, section:"🎬 Кино и фильмы", en:"a psychological thriller", ru:"психологический триллер", ex:[['"Black Swan" is one of the best psychological thrillers.','"Чёрный лебедь" — один из лучших психологических триллеров.']] },
+  { id:15, section:"🎬 Кино и фильмы", en:"to feel tension / be full of tension", ru:"ощущать напряжение / быть напряжённым", ex:[["The film kept us in tension until the very end.","Фильм держал нас в напряжении до самого конца."],["I felt tension from the first minute.","Я ощущал напряжение с первой минуты."]] },
+  { id:16, section:"🎬 Кино и фильмы", en:"to get an adrenaline rush", ru:"получить выброс адреналина", ex:[["Horror films give me a real adrenaline rush.","Фильмы ужасов дают мне настоящий выброс адреналина."]] },
+  { id:17, section:"🎬 Кино и фильмы", en:"tropes", ru:"клише / тропы (повторяющиеся приёмы)", ex:[["Horror film tropes include the killer who won't die.","Клише ужасов — злодей, которого невозможно убить."],["This film avoids all the typical horror tropes.","Этот фильм избегает всех типичных клише."]] },
+  { id:18, section:"🎬 Кино и фильмы", en:"damp", ru:"влажный (слегка)", ex:[["The air near the sea is always damp.","Воздух у моря всегда влажный."],["A damp T-shirt is not completely wet.","Слегка влажная футболка — это не мокрая."]] },
+
+  // 🍽️ ЕДА
+  { id:20, section:"🍽️ Еда и рестораны", en:"a waiter / a waitress", ru:"официант / официантка", ex:[["The waiter brought the wrong dish.","Официант принёс не то блюдо."],["She worked as a waitress for two years.","Она работала официанткой два года."]] },
+  { id:21, section:"🍽️ Еда и рестораны", en:"the main course", ru:"основное блюдо", ex:[["For the main course, I ordered steak.","На основное я заказал стейк."],["What would you like for the main course?","Что вы хотите на основное блюдо?"]] },
+  { id:22, section:"🍽️ Еда и рестораны", en:"a side dish", ru:"гарнир", ex:[["I'd like mashed potatoes as a side dish.","Я бы хотел пюре в качестве гарнира."],["The steak comes with a side dish of vegetables.","К стейку прилагается овощной гарнир."]] },
+  { id:23, section:"🍽️ Еда и рестораны", en:"cutlery / silverware / utensils", ru:"столовые приборы (вилка, ложка, нож)", ex:[["Could you bring me some cutlery, please?","Не могли бы принести мне приборы?"],["The waiter forgot to bring the cutlery.","Официант забыл принести столовые приборы."]] },
+  { id:24, section:"🍽️ Еда и рестораны", en:"flavour", ru:"вкус (еды)", ex:[["This soup has a very rich flavour.","У этого супа очень насыщенный вкус."],["We have ice cream in different flavours.","У нас есть мороженое разных вкусов."]] },
+  { id:25, section:"🍽️ Еда и рестораны", en:"to leave a tip", ru:"оставить чаевые", ex:[["It's polite to leave a tip if the service was good.","Вежливо оставить чаевые, если обслуживание хорошее."],["I always leave a tip at restaurants.","Я всегда оставляю чаевые в ресторанах."]] },
+  { id:26, section:"🍽️ Еда и рестораны", en:"cuisine", ru:"кухня (национальная)", ex:[["I love Italian cuisine, especially pasta.","Я люблю итальянскую кухню, особенно пасту."],["Thai cuisine is known for being very spicy.","Тайская кухня известна своей остротой."]] },
+  { id:27, section:"🍽️ Еда и рестораны", en:"a pastry", ru:"выпечка", ex:[["She bought some pastries at the bakery.","Она купила выпечку в пекарне."],["French pastries are famous all over the world.","Французская выпечка известна во всём мире."]] },
+  { id:28, section:"🍽️ Еда и рестораны", en:"to be fed up with sth", ru:"быть сытым по горло / надоело", ex:[["If I eat the same food every day, I'll be fed up with it.","Если есть одно и то же, быстро надоест."],["I'm fed up with cooking — let's order pizza.","Мне надоело готовить — давай закажем пиццу."]] },
+  { id:29, section:"🍽️ Еда и рестораны", en:"salty / spicy / bitter / sour", ru:"солёный / острый / горький / кислый", ex:[["This dish is too salty for me.","Это блюдо слишком солёное для меня."],["I can't eat spicy food — it's too hot.","Я не могу есть острую еду."]] },
+  { id:30, section:"🍽️ Еда и рестораны", en:"junk food", ru:"вредная еда / фастфуд", ex:[["Eating too much junk food is bad for your health.","Есть слишком много вредной еды плохо для здоровья."],["I try to avoid junk food during the week.","Я стараюсь избегать фастфуда в будни."]] },
+  { id:31, section:"🍽️ Еда и рестораны", en:"to boil / boiled", ru:"кипятить / варить — варёный", ex:[["Boil the water before adding pasta.","Вскипяти воду перед тем, как добавить пасту."],["Boiled rice is healthier than fried rice.","Варёный рис полезнее жареного."]] },
+  { id:32, section:"🍽️ Еда и рестораны", en:"seafood / seaweed", ru:"морепродукты / морские водоросли", ex:[["I love seafood: shrimp, mussels, and oysters.","Я люблю морепродукты: креветки, мидии и устрицы."],["Seaweed is widely used in Japanese cuisine.","Морские водоросли широко используются в японской кухне."]] },
+  { id:33, section:"🍽️ Еда и рестораны", en:"porridge / oatmeal / buckwheat", ru:"каша / овсянка / гречка", ex:[["I have porridge for breakfast every morning.","Я ем кашу на завтрак каждое утро."],["Buckwheat is a very popular dish in Russia.","Гречка — очень популярное блюдо в России."]] },
+  { id:34, section:"🍽️ Еда и рестораны", en:"to lose weight / to gain weight", ru:"похудеть / поправиться", ex:[["She wants to lose weight before the summer.","Она хочет похудеть перед летом."],["He gained weight after the holidays.","Он поправился после праздников."]] },
+  { id:35, section:"🍽️ Еда и рестораны", en:"to bulk up", ru:"набрать мышечную массу / накачаться", ex:[["He goes to the gym every day to bulk up.","Он ходит в зал каждый день, чтобы набрать массу."],["It takes months to bulk up properly.","Чтобы нормально набрать массу, нужны месяцы."]] },
+  { id:36, section:"🍽️ Еда и рестораны", en:"protein / fibre", ru:"белок / клетчатка", ex:[["Chicken and eggs are great sources of protein.","Курица и яйца — отличные источники белка."],["Vegetables and fruit are rich in fibre.","Овощи и фрукты богаты клетчаткой."]] },
+  { id:37, section:"🍽️ Еда и рестораны", en:"You're not a picky eater", ru:"ты не привереда в еде", ex:[["He eats everything — he's not a picky eater.","Он ест всё — совсем не привереда."],["My daughter is a very picky eater.","Моя дочь очень привередлива в еде."]] },
+  { id:38, section:"🍽️ Еда и рестораны", en:"diverse food / the diversity of food", ru:"разнообразная еда / разнообразие", ex:[["London is known for its diverse food scene.","Лондон известен разнообразием кухни."],["I enjoy the diversity of food in Asian restaurants.","Мне нравится разнообразие блюд в азиатских ресторанах."]] },
+  { id:39, section:"🍽️ Еда и рестораны", en:"to pay the bill", ru:"оплатить счёт", ex:[["Could we have the bill, please?","Можно нам счёт?"],["He insisted on paying the bill.","Он настоял на том, чтобы оплатить счёт."]] },
+  { id:40, section:"🍽️ Еда и рестораны", en:"tinned food / canned food", ru:"еда из консервов", ex:[["Tinned food is convenient but not always healthy.","Консервы удобны, но не всегда полезны."]] },
+
+  // 📚 ШКОЛА
+  { id:50, section:"📚 Школа и образование", en:"to attend classes / lectures / lessons", ru:"посещать уроки / лекции", ex:[["She attends English lessons three times a week.","Она посещает уроки английского три раза в неделю."],["He never attended lectures at university.","Он никогда не ходил на лекции в университете."]] },
+  { id:51, section:"📚 Школа и образование", en:"good / bad grades (marks)", ru:"хорошие / плохие оценки", ex:[["She always gets good grades in maths.","Она всегда получает хорошие оценки по математике."],["He got bad marks because he didn't study.","Он получил плохие оценки, потому что не учился."]] },
+  { id:52, section:"📚 Школа и образование", en:"to get a bachelor's / master's degree", ru:"получить степень бакалавра / магистра", ex:[["She got her master's degree in economics.","Она получила степень магистра по экономике."],["He plans to get a bachelor's degree in IT.","Он планирует получить степень бакалавра в IT."]] },
+  { id:53, section:"📚 Школа и образование", en:"to graduate from university", ru:"окончить университет", ex:[["He graduated from Kazan Federal University in 2020.","Он окончил КФУ в 2020 году."],["After graduating, she found a great job.","После окончания она нашла отличную работу."]] },
+  { id:54, section:"📚 Школа и образование", en:"to study at your own pace", ru:"учиться в своём темпе", ex:[["One advantage of homeschooling is studying at your own pace.","Одно из преимуществ домашнего обучения — учиться в своём темпе."],["Online courses let you study at your own pace.","Онлайн-курсы позволяют учиться в удобном для вас темпе."]] },
+  { id:55, section:"📚 Школа и образование", en:"to be homeschooled", ru:"быть на домашнем обучении", ex:[["She was homeschooled until the age of 12.","Она была на домашнем обучении до 12 лет."],["More children are being homeschooled today.","Всё больше детей переходят на домашнее обучение."]] },
+  { id:56, section:"📚 Школа и образование", en:"conventional schools", ru:"традиционные школы", ex:[["Conventional schools have a fixed timetable.","В традиционных школах фиксированное расписание."],["He prefers conventional schools over online learning.","Он предпочитает обычные школы онлайн-обучению."]] },
+  { id:57, section:"📚 Школа и образование", en:"drawbacks (= disadvantages)", ru:"недостатки", ex:[["One of the drawbacks of homeschooling is lack of socialisation.","Один из недостатков домашнего обучения — нехватка общения."],["Every method has its advantages and drawbacks.","У каждого метода есть свои плюсы и минусы."]] },
+  { id:58, section:"📚 Школа и образование", en:"peers", ru:"сверстники", ex:[["Homeschooled children sometimes feel isolated from their peers.","Дети на домашнем обучении иногда чувствуют оторванность от сверстников."],["It's important to communicate with your peers.","Важно общаться со своими сверстниками."]] },
+  { id:59, section:"📚 Школа и образование", en:"to feel isolated", ru:"чувствовать себя изолированным", ex:[["Some homeschooled kids feel isolated from the rest of the world.","Некоторые дети на домашнем обучении чувствуют себя изолированными."],["He felt isolated after moving to a new city.","Он чувствовал себя изолированным после переезда."]] },
+  { id:60, section:"📚 Школа и образование", en:"assignments / paperwork", ru:"письменные задания / учебные работы", ex:[["I have a lot of assignments this week.","У меня много заданий на этой неделе."],["She spent the whole evening doing paperwork.","Она провела весь вечер за учебными работами."]] },
+  { id:61, section:"📚 Школа и образование", en:"a tutor / a private tutor", ru:"репетитор", ex:[["She has a private English tutor.","У неё есть частный репетитор по английскому."],["He hired a tutor to prepare for the exam.","Он нанял репетитора для подготовки к экзамену."]] },
+  { id:62, section:"📚 Школа и образование", en:"to allow / to forbid", ru:"разрешать / запрещать", ex:[["Students are not allowed to use phones in class.","Студентам не разрешается использовать телефоны на занятиях."],["The school forbids students to use phones.","Школа запрещает студентам использовать телефоны."]] },
+  { id:63, section:"📚 Школа и образование", en:"exact sciences", ru:"точные науки", ex:[["She was always interested in exact sciences like maths and physics.","Её всегда интересовали точные науки."],["Exact sciences require logical thinking.","Точные науки требуют логического мышления."]] },
+  { id:64, section:"📚 Школа и образование", en:"social science", ru:"обществознание", ex:[["Social science was my favourite subject at school.","Обществознание было моим любимым предметом."]] },
+  { id:65, section:"📚 Школа и образование", en:"to socialise with peers", ru:"общаться со сверстниками", ex:[["Children need to socialise with peers to develop social skills.","Детям нужно общаться со сверстниками для развития навыков."],["She didn't have many chances to socialise with peers at home.","У неё было мало возможностей общаться со сверстниками дома."]] },
+
+  // 😊 ЭМОЦИИ
+  { id:70, section:"😊 Эмоции и чувства", en:"to feel / be calm — calm down", ru:"быть спокойным — успокоиться", ex:[["Try to stay calm — it's not a big problem.","Постарайся сохранять спокойствие."],["Calm down! Everything will be fine.","Успокойся! Всё будет хорошо."]] },
+  { id:71, section:"😊 Эмоции и чувства", en:"to feel / be confused", ru:"быть растерянным", ex:[["I felt confused after reading the instructions.","Я был растерян после прочтения инструкции."],["She looked confused when he explained the plan.","Она выглядела растерянной."]] },
+  { id:72, section:"😊 Эмоции и чувства", en:"to be satisfied with sth", ru:"быть довольным чем-то", ex:[["I'm really satisfied with my new job.","Я очень доволен своей новой работой."],["Are you happy with the results?","Ты доволен результатами?"]] },
+  { id:73, section:"😊 Эмоции и чувства", en:"terrified / frightened / scared", ru:"напуганный (ощущение человека)", ex:[["I was terrified when I heard the strange noise.","Я был в ужасе, когда услышал странный звук."],["She felt scared walking home alone at night.","Ей было страшно идти домой одной ночью."]] },
+  { id:74, section:"😊 Эмоции и чувства", en:"terrifying / frightening / scary", ru:"пугающий (описание вещи) ⚠️ не путать с 'scared'", ex:[["It was a terrifying experience.","Это был пугающий опыт."],["The story he told was very frightening.","История, которую он рассказал, была пугающей."]] },
+  { id:75, section:"😊 Эмоции и чувства", en:"excited", ru:"взволнованный (в хорошем смысле)", ex:[["I'm so excited about my trip to London!","Я так рад предстоящей поездке в Лондон!"],["The children were excited on Christmas morning.","Дети были в восторге утром в Рождество."]] },
+  { id:76, section:"😊 Эмоции и чувства", en:"to feel curious / curiosity", ru:"быть любопытным / любопытство", ex:[["I felt curious about the new student.","Мне было любопытно узнать о новом ученике."],["Curiosity is important for learning.","Любопытство важно для обучения."]] },
+  { id:77, section:"😊 Эмоции и чувства", en:"depressed / to be energised", ru:"подавленный / быть полным сил", ex:[["He felt depressed after losing his job.","Он чувствовал себя подавленным после потери работы."],["I feel energised after a good workout.","Я чувствую себя полным сил после тренировки."]] },
+  { id:78, section:"😊 Эмоции и чувства", en:"anxiety", ru:"тревога / тревожность", ex:[["She experiences anxiety before important exams.","Она испытывает тревогу перед важными экзаменами."],["Regular exercise helps to reduce anxiety.","Регулярные тренировки помогают снизить тревожность."]] },
+  { id:79, section:"😊 Эмоции и чувства", en:"angry / anger", ru:"злой / злость", ex:[["He got angry when he missed the bus.","Он разозлился, когда опоздал на автобус."],["She tried to hide her anger.","Она пыталась скрыть свой гнев."]] },
+  { id:80, section:"😊 Эмоции и чувства", en:"to feel lonely / to be alone", ru:"чувствовать себя одиноким / быть одному", ex:[["She felt lonely after moving to a new city.","Она чувствовала себя одинокой после переезда."],["He likes to be alone in the evenings.","Он любит побыть в одиночестве по вечерам."]] },
+  { id:81, section:"😊 Эмоции и чувства", en:"to feel relief", ru:"почувствовать облегчение", ex:[["I felt relief when the main character survived.","Я почувствовал облегчение, когда главный герой выжил."],["She sighed with relief when the exam was over.","Она вздохнула с облегчением, когда экзамен закончился."]] },
+  { id:82, section:"😊 Эмоции и чувства", en:"overweight", ru:"лишний вес / страдающий лишним весом", ex:[["The doctor said he was slightly overweight.","Врач сказал, что у него небольшой лишний вес."],["Being overweight can cause health problems.","Лишний вес может вызывать проблемы со здоровьем."]] },
+  { id:83, section:"😊 Эмоции и чувства", en:"to be tired of sth", ru:"устать от чего-то (надоело)", ex:[["I'm tired of eating the same food every day.","Мне надоело есть одно и то же каждый день."],["She felt tired of her routine.","Ей надоела её рутина."]] },
+
+  // 🗣️ ИДИОМЫ
+  { id:90, section:"🗣️ Идиомы и фразы", en:"It's not my piece of cake", ru:"это не в моём вкусе / это не для меня", ex:[["Horror films? It's not my piece of cake.","Фильмы ужасов? Это точно не моё."],["Maths was never my piece of cake at school.","Математика никогда не давалась мне в школе."]] },
+  { id:91, section:"🗣️ Идиомы и фразы", en:"I can relate to it / it's relatable", ru:"я могу это понять / это близко мне", ex:[["I can really relate to this character.","Я очень хорошо понимаю этого персонажа."],["His jokes were so relatable — everyone laughed.","Его шутки были очень близкими — все смеялись."]] },
+  { id:92, section:"🗣️ Идиомы и фразы", en:"out of order", ru:"сломано, не работает", ex:[["The coffee machine is out of order again.","Кофемашина снова не работает."],["Sorry, the lift is out of order today.","Извините, лифт сегодня не работает."]] },
+  { id:93, section:"🗣️ Идиомы и фразы", en:"out of charge / out of time", ru:"без зарядки / нет времени", ex:[["My phone is out of charge — do you have a charger?","Мой телефон разрядился — у тебя есть зарядка?"],["We are out of time — let's finish here.","У нас нет времени — давайте закончим."]] },
+  { id:94, section:"🗣️ Идиомы и фразы", en:"to make sure", ru:"убедиться, удостовериться", ex:[["Make sure you lock the door before you leave.","Убедись, что закрыл дверь, прежде чем уйти."],["I need to make sure the tickets are booked.","Мне нужно убедиться, что билеты забронированы."]] },
+  { id:95, section:"🗣️ Идиомы и фразы", en:"to get stuck in a traffic jam", ru:"застрять в пробке", ex:[["I was late because I got stuck in a traffic jam.","Я опоздал, потому что застрял в пробке."],["We got stuck in a huge traffic jam on the motorway.","Мы застряли в огромной пробке на шоссе."]] },
+  { id:96, section:"🗣️ Идиомы и фразы", en:"to get on with sb / to get along with sb", ru:"ладить с кем-то", ex:[["I get on well with my colleagues.","Я хорошо лажу со своими коллегами."],["She doesn't get along with her neighbour.","Она не ладит со своим соседом."]] },
+  { id:97, section:"🗣️ Идиомы и фразы", en:"to run errands", ru:"бегать по делам", ex:[["I spent the whole morning running errands.","Я провёл всё утро, бегая по делам."],["Could you run some errands for me today?","Ты мог бы сделать несколько дел для меня?"]] },
+  { id:98, section:"🗣️ Идиомы и фразы", en:"to stick to a plan", ru:"придерживаться плана", ex:[["It's important to stick to a plan when learning a language.","Важно придерживаться плана при изучении языка."],["She always sticks to her diet.","Она всегда придерживается своей диеты."]] },
+  { id:99, section:"🗣️ Идиомы и фразы", en:"though (в конце предложения)", ru:"хотя / тем не менее / но всё же", ex:[["I didn't like the movie. It was kind of boring, though.","Мне не понравился фильм. Он был скучноват, хотя."],["I'm tired. I'll come with you, though.","Я устал. Тем не менее, пойду с тобой."]] },
+  { id:100, section:"🗣️ Идиомы и фразы", en:"eventually", ru:"в конце концов", ex:[["He eventually found a job he liked.","В конце концов он нашёл работу, которая ему нравилась."],["She eventually admitted she was wrong.","В конце концов она признала, что была неправа."]] },
+  { id:101, section:"🗣️ Идиомы и фразы", en:"to ask for sth / to ask about sth", ru:"попросить что-то / спросить о чём-то ⚠️ разные предлоги", ex:[["I asked for the bill but got the wrong one.","Я попросил счёт, но принесли не тот."],["She asked about the price before ordering.","Она спросила о цене, прежде чем заказать."]] },
+  { id:102, section:"🗣️ Идиомы и фразы", en:"to tell the truth / actually", ru:"по правде говоря / на самом деле", ex:[["To tell the truth, I didn't enjoy the party.","По правде говоря, мне не понравилась вечеринка."],["Actually, I think you're right.","На самом деле, я думаю, ты прав."]] },
+  { id:103, section:"🗣️ Идиомы и фразы", en:"It takes me a long time", ru:"это занимает у меня много времени", ex:[["It takes me a long time to get ready in the morning.","Мне требуется много времени на сборы."],["It took him a long time to learn to drive.","У него ушло много времени на то, чтобы научиться водить."]] },
+  { id:104, section:"🗣️ Идиомы и фразы", en:"make an excuse", ru:"оправдаться / придумать отговорку", ex:[["He always makes excuses when he's late.","Он всегда придумывает отговорки, когда опаздывает."],["Stop making excuses and just apologise.","Прекрати оправдываться и просто извинись."]] },
+
+  // 🔄 ГЛАГОЛЫ
+  { id:110, section:"🔄 Важные глаголы", en:"to realise", ru:"осознать, понять", ex:[["I suddenly realised I had forgotten my keys.","Я вдруг осознал, что забыл ключи."],["She didn't realise how late it was.","Она не осознавала, как поздно было."]] },
+  { id:111, section:"🔄 Важные глаголы", en:"to bother", ru:"беспокоить, раздражать", ex:[["It bothers me when people are late.","Меня раздражает, когда люди опаздывают."],["Does the noise bother you?","Шум тебя не беспокоит?"]] },
+  { id:112, section:"🔄 Важные глаголы", en:"to get tired / hungry / cold / angry", ru:"устать / проголодаться / замёрзнуть / разозлиться", ex:[["I always get hungry after the gym.","Я всегда голодаю после спортзала."],["She got tired of waiting and left.","Она устала ждать и ушла."]] },
+  { id:113, section:"🔄 Важные глаголы", en:"to spend money ON sth / to pay FOR sth", ru:"тратить деньги НА что-то / платить ЗА что-то ⚠️ предлоги", ex:[["She spends a lot of money on clothes.","Она тратит много денег на одежду."],["How much did you pay for this phone?","Сколько ты заплатил за этот телефон?"]] },
+  { id:114, section:"🔄 Важные глаголы", en:"to look for", ru:"искать", ex:[["I'm looking for my keys — have you seen them?","Я ищу свои ключи — ты их не видел?"],["What are you looking for?","Что ты ищешь?"]] },
+  { id:115, section:"🔄 Важные глаголы", en:"to fall in love (with sb)", ru:"влюбиться (в кого-то)", ex:[["He fell in love with her at first sight.","Он влюбился в неё с первого взгляда."],["They fell in love during their trip to Italy.","Они влюбились во время поездки в Италию."]] },
+  { id:116, section:"🔄 Важные глаголы", en:"to inherit", ru:"унаследовать", ex:[["He inherited a large house from his grandfather.","Он унаследовал большой дом от деда."],["She inherited her mother's talent for music.","Она унаследовала от матери музыкальный талант."]] },
+  { id:117, section:"🔄 Важные глаголы", en:"to declutter / to clutter", ru:"расхламить / захламить", ex:[["I need to declutter my wardrobe.","Мне нужно разобрать и расхламить свой шкаф."],["Stop cluttering your desk with unnecessary things.","Перестань захламлять стол ненужными вещами."]] },
+  { id:118, section:"🔄 Важные глаголы", en:"to improve", ru:"улучшать(ся)", ex:[["My English has improved a lot this year.","Мой английский значительно улучшился в этом году."],["She wants to improve her cooking skills.","Она хочет улучшить свои навыки готовки."]] },
+  { id:119, section:"🔄 Важные глаголы", en:"to compete / competitive / competition", ru:"соревноваться / конкурентный / соревнование", ex:[["She loves to compete and always wants to win.","Она любит соревноваться и всегда хочет победить."],["The market has become very competitive.","Рынок стал очень конкурентным."]] },
+  { id:120, section:"🔄 Важные глаголы", en:"to get distracted", ru:"отвлечься", ex:[["I easily get distracted when I study at home.","Я легко отвлекаюсь, когда учусь дома."],["Try not to get distracted by your phone.","Старайся не отвлекаться на телефон."]] },
+  { id:121, section:"🔄 Важные глаголы", en:"to appreciate", ru:"ценить, быть благодарным", ex:[["I really appreciate your help.","Я очень ценю твою помощь."],["She appreciates good music and art.","Она ценит хорошую музыку и искусство."]] },
+  { id:122, section:"🔄 Важные глаголы", en:"to rely on sb / to count on sb", ru:"полагаться на кого-то / рассчитывать на кого-то", ex:[["You can always rely on her — she never lets you down.","На неё всегда можно положиться."],["I'm counting on you to finish this on time.","Я рассчитываю на тебя."]] },
+  { id:123, section:"🔄 Важные глаголы", en:"to encounter sb / to run into sb", ru:"неожиданно встретить кого-то", ex:[["I ran into my old teacher at the supermarket.","Я неожиданно встретил своего старого учителя."],["He encountered a strange man on the moor.","Он наткнулся на странного человека на болоте."]] },
+  { id:124, section:"🔄 Важные глаголы", en:"to abandon sth", ru:"бросить, оставить что-то", ex:[["He abandoned his car in the middle of the road.","Он бросил машину посреди дороги."],["The old factory was abandoned years ago.","Старый завод был заброшен много лет назад."]] },
+  { id:125, section:"🔄 Важные глаголы", en:"to adopt sb", ru:"усыновить / удочерить", ex:[["They adopted a child from an orphanage.","Они усыновили ребёнка из детского дома."],["She was adopted when she was three years old.","Её удочерили, когда ей было три года."]] },
+  { id:126, section:"🔄 Важные глаголы", en:"to remind (sb of sth)", ru:"напоминать (кому-то о чём-то)", ex:[["This song reminds me of my childhood.","Эта песня напоминает мне о детстве."],["Can you remind me about the meeting tomorrow?","Можешь напомнить мне о встрече завтра?"]] },
+  { id:127, section:"🔄 Важные глаголы", en:"to be addicted to sth", ru:"быть зависимым от чего-то", ex:[["He is addicted to his phone.","Он зависим от телефона."],["Many people are addicted to social media.","Многие люди зависимы от социальных сетей."]] },
+  { id:128, section:"🔄 Важные глаголы", en:"to relax / to rest / to chill out", ru:"расслабиться / отдохнуть / расслабиться (разг.)", ex:[["I need a weekend to relax and do nothing.","Мне нужны выходные, чтобы расслабиться."],["Let's chill out at home tonight.","Давай сегодня вечером просто расслабимся дома."]] },
+  { id:129, section:"🔄 Важные глаголы", en:"make / do (collocations)", ru:"make — создать / do — выполнить", ex:[["make a decision, make a speech, make a phone call, make friends","принять решение, произнести речь, позвонить, подружиться"],["do homework, do business, do the washing-up","делать домашнее задание, вести бизнес, мыть посуду"]] },
+  { id:130, section:"🔄 Важные глаголы", en:"to maintain", ru:"поддерживать, сохранять", ex:[["It's important to maintain a healthy lifestyle.","Важно поддерживать здоровый образ жизни."],["The player maintained suspense until the last round.","Игрок поддерживал напряжение до последнего раунда."]] },
+
+  // 👥 ЛЮДИ И ОТНОШЕНИЯ
+  { id:140, section:"👥 Люди и отношения", en:"to meet sb / to meet with sb", ru:"встретить случайно / встретиться (по договорённости) ⚠️", ex:[["I met an old friend on the street yesterday.","Я случайно встретил старого друга вчера."],["Let's meet with the team on Monday at 10.","Давайте встретимся с командой в понедельник в 10."]] },
+  { id:141, section:"👥 Люди и отношения", en:"to hang out (with sb)", ru:"зависать, тусоваться (с кем-то)", ex:[["We love hanging out on weekends.","Мы любим зависать по выходным."],["Do you want to hang out after work?","Хочешь потусоваться после работы?"]] },
+  { id:142, section:"👥 Люди и отношения", en:"to open up to sb", ru:"открыться кому-то, раскрыться", ex:[["It took him a long time to open up to her.","Ему потребовалось много времени, чтобы открыться ей."],["She's not the type to open up easily.","Она не из тех, кто легко открывается."]] },
+  { id:143, section:"👥 Люди и отношения", en:"to fall out with sb", ru:"поссориться с кем-то", ex:[["She fell out with her best friend over a stupid argument.","Она поссорилась со своей лучшей подругой."],["Have you two fallen out again?","Вы двое снова поссорились?"]] },
+  { id:144, section:"👥 Люди и отношения", en:"to make up with sb", ru:"помириться с кем-то", ex:[["They fell out but made up a week later.","Они поссорились, но помирились через неделю."],["It's important to make up after an argument.","Важно мириться после ссоры."]] },
+  { id:145, section:"👥 Люди и отношения", en:"to drift apart (from sb)", ru:"постепенно расходиться, терять контакт", ex:[["We were close at school but drifted apart after graduation.","В школе мы были близки, но после выпуска потеряли контакт."],["Old friends sometimes drift apart over time.","Старые друзья иногда постепенно расходятся."]] },
+  { id:146, section:"👥 Люди и отношения", en:"to back sb up", ru:"поддержать кого-то", ex:[["Thank you for backing me up in that meeting.","Спасибо, что поддержал меня на той встрече."],["She always backs her friends up no matter what.","Она всегда поддерживает своих друзей."]] },
+  { id:147, section:"👥 Люди и отношения", en:"to let sb down", ru:"подвести, разочаровать кого-то", ex:[["I don't want to let you down.","Я не хочу тебя подвести."],["He let the whole team down by not showing up.","Он подвёл всю команду, не придя."]] },
+  { id:148, section:"👥 Люди и отношения", en:"to look out for each other", ru:"присматривать друг за другом", ex:[["Good friends always look out for each other.","Хорошие друзья всегда заботятся друг о друге."],["Will you look out for my sister while I'm away?","Ты присмотришь за моей сестрой?"]] },
+  { id:149, section:"👥 Люди и отношения", en:"to turn to sb", ru:"обратиться к кому-то (за помощью)", ex:[["When I have a problem, I always turn to my mum.","Когда у меня проблема, я всегда обращаюсь к маме."],["Who do you turn to when you need advice?","К кому ты обращаешься за советом?"]] },
+  { id:150, section:"👥 Люди и отношения", en:"to put up with sb", ru:"терпеть кого-то", ex:[["I can't put up with his behaviour anymore.","Я больше не могу терпеть его поведение."],["How do you put up with all that noise?","Как ты терпишь весь этот шум?"]] },
+  { id:151, section:"👥 Люди и отношения", en:"to stay away from sb", ru:"держаться подальше от кого-то", ex:[["Stay away from people who bring you down.","Держись подальше от людей, которые тебя угнетают."],["He was told to stay away from the suspect.","Ему велели держаться подальше от подозреваемого."]] },
+  { id:152, section:"👥 Люди и отношения", en:"to give sb a ride / to give sb a lift", ru:"подвезти кого-то", ex:[["Can you give me a lift to the station?","Ты можешь подвезти меня до станции?"],["He gave her a ride home after the party.","Он подвёз её домой после вечеринки."]] },
+  { id:153, section:"👥 Люди и отношения", en:"convenient / comfortable", ru:"удобный (абстрактно) / удобный (физически) ⚠️", ex:[["Is this time convenient for you?","Это время тебе удобно?"],["This sofa is very comfortable — I could sleep here.","Этот диван очень удобный."]] },
+  { id:154, section:"👥 Люди и отношения", en:"siblings", ru:"братья и сёстры", ex:[["Do you have any siblings?","У тебя есть братья или сёстры?"],["She has two siblings — a brother and a sister.","У неё двое — брат и сестра."]] },
+  { id:155, section:"👥 Люди и отношения", en:"a shrink = a therapist", ru:"психотерапевт (разговорное)", ex:[["He's been seeing a shrink for two years.","Он ходит к психотерапевту уже два года."],["She recommended a great therapist to me.","Она порекомендовала мне отличного терапевта."]] },
+  { id:156, section:"👥 Люди и отношения", en:"tough [тАф]", ru:"очень сложный, трудный", ex:[["It was a really tough week for everyone.","Это была действительно тяжёлая неделя."],["Learning a new language is tough but worth it.","Учить новый язык сложно, но оно того стоит."]] },
+
+  // 🚗 ТРАНСПОРТ
+  { id:160, section:"🚗 Транспорт и город", en:"to catch a bus", ru:"успеть на автобус / сесть в автобус", ex:[["Run! We need to catch the last bus.","Беги! Нам нужно успеть на последний автобус."],["I just caught the bus in time.","Я как раз успел на автобус."]] },
+  { id:161, section:"🚗 Транспорт и город", en:"to stand in a queue / in a line", ru:"стоять в очереди", ex:[["We had to stand in a queue for two hours.","Нам пришлось стоять в очереди два часа."],["There was a long line at the airport.","В аэропорту была длинная очередь."]] },
+  { id:162, section:"🚗 Транспорт и город", en:"sightseeing / tourist attractions", ru:"осмотр достопримечательностей / туристические места", ex:[["We spent the whole day sightseeing in Rome.","Мы провели целый день, осматривая достопримечательности."],["What are the main tourist attractions here?","Какие здесь главные достопримечательности?"]] },
+  { id:163, section:"🚗 Транспорт и город", en:"to pack / to unpack a suitcase", ru:"собрать / разобрать чемодан", ex:[["I need to pack my suitcase tonight.","Мне нужно собрать чемодан сегодня вечером."],["She unpacked her suitcase as soon as she arrived.","Она разобрала чемодан, как только приехала."]] },
+  { id:164, section:"🚗 Транспорт и город", en:"a suitcase / luggage", ru:"чемодан / багаж", ex:[["My suitcase is too heavy.","Мой чемодан слишком тяжёлый."],["You are only allowed one piece of luggage.","Вам разрешён только один предмет багажа."]] },
+  { id:165, section:"🚗 Транспорт и город", en:"the traffic lights turned red / green", ru:"светофор загорелся красным / зелёным", ex:[["Stop! The traffic lights turned red.","Стоп! Загорелся красный."],["She accelerated when the traffic lights turned green.","Она набрала скорость, когда загорелся зелёный."]] },
+  { id:166, section:"🚗 Транспорт и город", en:"to crash into sth / sb", ru:"врезаться во что-то / в кого-то", ex:[["The car crashed into a lamppost.","Машина врезалась в фонарный столб."],["He almost crashed into a cyclist.","Он чуть не врезался в велосипедиста."]] },
+  { id:167, section:"🚗 Транспорт и город", en:"local currency", ru:"местная валюта", ex:[["Always exchange money to local currency before travelling.","Всегда меняй деньги на местную валюту перед поездкой."],["The local currency here is the Thai baht.","Местная валюта здесь — тайский бат."]] },
+  { id:168, section:"🚗 Транспорт и город", en:"to arrive IN a city / AT a place", ru:"прибыть В город / НА место ⚠️ предлоги", ex:[["We arrived in London at midnight.","Мы прибыли в Лондон в полночь."],["She arrived at the airport two hours early.","Она прибыла в аэропорт за два часа."]] },
+  { id:169, section:"🚗 Транспорт и город", en:"to save up money for sth", ru:"копить деньги на что-то", ex:[["He's saving up money for a new car.","Он копит деньги на новую машину."],["She saved up for the trip for two years.","Она копила на поездку два года."]] },
+
+  // 📖 КНИГИ
+  { id:180, section:"📖 Книги (Sherlock Holmes)", en:"a hound /haʊnd/", ru:"гончая собака", ex:[["The hound was described as a terrifying creature.","Гончая была описана как ужасающее существо."],["They heard the howl of a hound in the darkness.","Они услышали вой гончей в темноте."]] },
+  { id:181, section:"📖 Книги (Sherlock Holmes)", en:"a will", ru:"завещание", ex:[["He left all his money to his nephew in his will.","В завещании он оставил все деньги племяннику."],["The lawyer read the will after the funeral.","Адвокат зачитал завещание после похорон."]] },
+  { id:182, section:"📖 Книги (Sherlock Holmes)", en:"a moor", ru:"болото / торфяник (дикая местность)", ex:[["The story takes place on a dark moor.","История происходит на тёмном болоте."],["It's dangerous to walk on the moor at night.","Опасно ходить по болоту ночью."]] },
+  { id:183, section:"📖 Книги (Sherlock Holmes)", en:"a butler", ru:"дворецкий", ex:[["The butler opened the door and showed us inside.","Дворецкий открыл дверь и провёл нас внутрь."],["Barrymore is the butler of Baskerville Hall.","Бэрримор — дворецкий Баскервиль-Холла."]] },
+  { id:184, section:"📖 Книги (Sherlock Holmes)", en:"a clue", ru:"улика, подсказка", ex:[["Sherlock Holmes found an important clue.","Шерлок Холмс нашёл важную улику."],["The detective followed every clue carefully.","Детектив тщательно следовал каждой улике."]] },
+  { id:185, section:"📖 Книги (Sherlock Holmes)", en:"a mystery", ru:"тайна, загадка", ex:[["The disappearance remains a mystery.","Исчезновение по-прежнему остаётся тайной."],["Sherlock Holmes loves solving mysteries.","Шерлок Холмс любит разгадывать загадки."]] },
+  { id:186, section:"📖 Книги (Sherlock Holmes)", en:"footprints", ru:"следы (ног)", ex:[["The detective found footprints near the door.","Детектив нашёл следы у двери."],["There were large footprints in the mud.","На грязи были видны большие следы."]] },
+  { id:187, section:"📖 Книги (Sherlock Holmes)", en:"abandoned", ru:"заброшенный", ex:[["They spent the night in an abandoned house.","Они провели ночь в заброшенном доме."],["The old mine had been abandoned for decades.","Старая шахта была заброшена несколько десятилетий назад."]] },
+  { id:188, section:"📖 Книги (Sherlock Holmes)", en:"wilderness", ru:"дикая местность / глушь", ex:[["They were lost in the wilderness for three days.","Они были потеряны в дикой местности три дня."],["The moor is a vast wilderness.","Болото — это обширная дикая местность."]] },
+  { id:189, section:"📖 Книги (Sherlock Holmes)", en:"a villain", ru:"злодей", ex:[["Every good story needs a great villain.","Каждой хорошей истории нужен отличный злодей."],["The villain was caught in the final chapter.","Злодея поймали в последней главе."]] },
+  { id:190, section:"📖 Книги (Sherlock Holmes)", en:"a tear [тɪə]", ru:"слеза ⚠️ не путать с tear [тɛə] = рвать", ex:[["A tear ran down her cheek.","Слеза покатилась по её щеке."],["He was moved to tears by the story.","Он был растроган историей до слёз."]] },
+
+  // 🌤️ ПРОЧЕЕ
+  { id:200, section:"🌤️ Прочая лексика", en:"accurate / accuracy / inaccuracy", ru:"точный / точность / неточность", ex:[["His description was very accurate.","Его описание было очень точным."],["The accuracy of this report is questionable.","Точность этого отчёта вызывает сомнения."]] },
+  { id:201, section:"🌤️ Прочая лексика", en:"an amusement park / amusing (= funny)", ru:"парк аттракционов / смешной, забавный", ex:[["We spent the whole day at the amusement park.","Мы провели целый день в парке аттракционов."],["His story was very amusing.","Его история была очень забавной."]] },
+  { id:202, section:"🌤️ Прочая лексика", en:"a stomachache", ru:"боль в животе", ex:[["I have a stomachache after eating too much.","У меня болит живот после того, как я слишком много съел."],["She had a stomachache and couldn't go to school.","У неё болел живот, и она не смогла пойти в школу."]] },
+  { id:203, section:"🌤️ Прочая лексика", en:"to catch the flu", ru:"подхватить грипп / заболеть", ex:[["I caught the flu last week.","Я заболел гриппом на прошлой неделе."],["He caught the flu and stayed in bed for a week.","Он заболел и пролежал в постели неделю."]] },
+  { id:204, section:"🌤️ Прочая лексика", en:"heating", ru:"отопление", ex:[["The heating broke down in the middle of winter.","Отопление сломалось в середине зимы."],["We need to turn on the heating — it's getting cold.","Нам нужно включить отопление."]] },
+  { id:205, section:"🌤️ Прочая лексика", en:"the 19th century / century", ru:"XIX век / век", ex:[["The story takes place in the 19th century.","История происходит в XIX веке."],["A century is 100 years.","Век — это 100 лет."]] },
+  { id:206, section:"🌤️ Прочая лексика", en:"to be good at sth", ru:"хорошо уметь что-то / разбираться в чём-то", ex:[["She is very good at mathematics.","Она очень хорошо разбирается в математике."],["Are you good at cooking?","Ты хорошо готовишь?"]] },
+  { id:207, section:"🌤️ Прочая лексика", en:"at a young age", ru:"в молодом возрасте", ex:[["She started learning English at a young age.","Она начала учить английский в раннем возрасте."],["Many great athletes start training at a young age.","Многие великие спортсмены начинают тренироваться рано."]] },
+  { id:208, section:"🌤️ Прочая лексика", en:"public speech", ru:"публичная речь / выступление", ex:[["He gave a powerful public speech at the conference.","Он произнёс мощную публичную речь на конференции."],["Public speaking is a very useful skill.","Умение выступать публично — очень полезный навык."]] },
+  { id:209, section:"🌤️ Прочая лексика", en:"heart ≠ heard ≠ hurt ⚠️", ru:"сердце ≠ слышал ≠ болело / причинял боль", ex:[["My heart was beating fast.","Моё сердце быстро билось."],["I heard a strange noise. / My knee hurt after the run.","Я услышал странный звук. / Колено болело после пробежки."]] },
+  { id:210, section:"🌤️ Прочая лексика", en:"flour [flaʊər] ≠ flower [flaʊər] ⚠️", ru:"мука ≠ цветок (произносятся одинаково!)", ex:[["You need flour to make bread.","Чтобы испечь хлеб, нужна мука."],["She bought a bouquet of flowers.","Она купила букет цветов."]] },
+  { id:211, section:"🌤️ Прочая лексика", en:"I'm broke / I'm broken", ru:"я на мели (без денег) / я сломлен (морально) ⚠️", ex:[["Sorry, I can't come — I'm broke this month.","Извини, не смогу — я на мели в этом месяце."],["After the breakup, he felt completely broken.","После расставания он чувствовал себя полностью сломленным."]] },
+  { id:212, section:"🌤️ Прочая лексика", en:"a canteen / a coffee break", ru:"столовая / перерыв на кофе", ex:[["We have lunch in the school canteen every day.","Мы каждый день обедаем в школьной столовой."],["Let's take a coffee break — I need a rest.","Давай сделаем перерыв на кофе."]] },
+  { id:213, section:"🌤️ Прочая лексика", en:"to be on the edge (of sth)", ru:"быть на грани чего-то", ex:[["The company was on the edge of bankruptcy.","Компания была на грани банкротства."],["She was on the edge of tears.","Она была на грани слёз."]] },
+  { id:214, section:"🌤️ Прочая лексика", en:"recently / already / just / yet / never / ever / since / for", ru:"недавно / уже / только что / ещё не / никогда / когда-либо / с / в течение", ex:[["I've recently started watching British series.","Я недавно начал смотреть британские сериалы."],["Have you ever been to London?","Ты когда-нибудь бывал в Лондоне?"]] },
+  { id:215, section:"🌤️ Прочая лексика", en:"to be reliable / unreliable", ru:"быть надёжным / ненадёжным", ex:[["He's the most reliable person I know.","Он самый надёжный человек, которого я знаю."],["She's unreliable — she always cancels at the last minute.","Она ненадёжна — всегда отменяет в последний момент."]] },
+];
+
+// ═══════════════════════════════════════════════════════════
+//  STATE & STORAGE
+// ═══════════════════════════════════════════════════════════
+
+const STORAGE_KEY = 'vocabTrainer_v2';
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : { known: {}, lastStudied: null, streak: 0, lastStreakDate: null };
+  } catch { return { known: {}, lastStudied: null, streak: 0, lastStreakDate: null }; }
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+}
+
+let state = loadState();
+updateStreak();
+
+function updateStreak() {
+  const today = new Date().toDateString();
+  if (state.lastStreakDate === today) return;
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  if (state.lastStreakDate === yesterday) {
+    state.streak = (state.streak || 0) + 1;
+  } else if (state.lastStreakDate !== today) {
+    state.streak = 0;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SECTIONS
+// ═══════════════════════════════════════════════════════════
+
+const sections = [...new Set(VOCAB.map(v => v.section))];
+let selectedSections = new Set(sections);
+let sessionCards = [];
+let currentIdx = 0;
+let isFlipped = false;
+let sessionKnown = 0;
+let sessionForgot = 0;
+let wrongCards = [];
+
+function buildSectionGrid() {
+  const grid = document.getElementById('sectionGrid');
+  grid.innerHTML = '';
+  sections.forEach(sec => {
+    const count = VOCAB.filter(v => v.section === sec).length;
+    const el = document.createElement('div');
+    el.className = 'section-pill selected';
+    el.dataset.sec = sec;
+    el.innerHTML = `<span>${sec}</span><span class="pill-count">${count}</span>`;
+    el.onclick = () => toggleSection(sec, el);
+    grid.appendChild(el);
+  });
+  updateStartBtn();
+}
+
+function toggleSection(sec, el) {
+  if (selectedSections.has(sec)) { selectedSections.delete(sec); el.classList.remove('selected'); }
+  else { selectedSections.add(sec); el.classList.add('selected'); }
+  updateStartBtn();
+}
+
+function selectAll() {
+  selectedSections = new Set(sections);
+  document.querySelectorAll('.section-pill').forEach(el => el.classList.add('selected'));
+  updateStartBtn();
+}
+
+function selectWeak() {
+  selectedSections = new Set();
+  document.querySelectorAll('.section-pill').forEach(el => el.classList.remove('selected'));
+  // Add sections that have weak words
+  VOCAB.forEach(v => {
+    if (!state.known[v.id]) {
+      selectedSections.add(v.section);
+      const el = document.querySelector(`[data-sec="${v.section}"]`);
+      if (el) el.classList.add('selected');
+    }
+  });
+  updateStartBtn();
+}
+
+function updateStartBtn() {
+  const count = VOCAB.filter(v => selectedSections.has(v.section)).length;
+  const btn = document.getElementById('startBtn');
+  btn.disabled = count === 0;
+  btn.textContent = count > 0 ? `Начать (${count} слов) →` : 'Начать →';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SESSION
+// ═══════════════════════════════════════════════════════════
+
+function startSession(cards) {
+  const pool = cards || VOCAB.filter(v => selectedSections.has(v.section));
+  // Shuffle, put unknown first
+  const unknown = pool.filter(v => !state.known[v.id]);
+  const known = pool.filter(v => state.known[v.id]);
+  sessionCards = [...shuffle(unknown), ...shuffle(known)].slice(0, 30);
+  currentIdx = 0; sessionKnown = 0; sessionForgot = 0; wrongCards = [];
+
+  document.getElementById('selectorState').style.display = 'none';
+  document.getElementById('resultsState').style.display = 'none';
+  document.getElementById('cardState').style.display = 'block';
+  renderCard();
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function renderCard() {
+  const card = sessionCards[currentIdx];
+  const total = sessionCards.length;
+  const pct = (currentIdx / total) * 100;
+
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('cardCounter').textContent = `${currentIdx + 1} / ${total}`;
+  document.getElementById('cardWord').textContent = card.en;
+  document.getElementById('cardTranslation').textContent = card.ru;
+  document.getElementById('cardTag').textContent = card.section;
+  document.getElementById('cardTagBack').textContent = card.section;
+
+  // Examples
+  const exContainer = document.getElementById('cardExamples');
+  exContainer.innerHTML = '';
+  (card.ex || []).forEach(([en, ru]) => {
+    const div = document.createElement('div');
+    div.className = 'example';
+    div.innerHTML = `<div class="en">${en}</div><div class="ru">${ru}</div>`;
+    exContainer.appendChild(div);
+  });
+
+  // Warning boxes for ⚠️ cards
+  if (card.ru.includes('⚠️')) {
+    const warn = document.createElement('div');
+    warn.className = 'warning-box';
+    warn.textContent = '⚠️ Частая ошибка — обрати внимание!';
+    exContainer.appendChild(warn);
+  }
+
+  // Reset flip
+  isFlipped = false;
+  document.getElementById('cardInner').classList.remove('flipped');
+  document.getElementById('answerBtns').classList.add('hidden');
+  document.getElementById('flipPrompt').style.opacity = '1';
+}
+
+function flipCard() {
+  if (isFlipped) return;
+  isFlipped = true;
+  document.getElementById('cardInner').classList.add('flipped');
+  document.getElementById('answerBtns').classList.remove('hidden');
+  document.getElementById('flipPrompt').style.opacity = '0';
+}
+
+function answer(knew) {
+  const card = sessionCards[currentIdx];
+  if (knew) {
+    state.known[card.id] = (state.known[card.id] || 0) + 1;
+    sessionKnown++;
+  } else {
+    state.known[card.id] = 0;
+    sessionForgot++;
+    wrongCards.push(card);
+  }
+  saveState();
+  currentIdx++;
+  if (currentIdx >= sessionCards.length) { showResults(); return; }
+
+  // Animate card out
+  const ci = document.getElementById('cardInner');
+  ci.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+  ci.style.transform = knew ? 'translateX(60px)' : 'translateX(-60px)';
+  ci.style.opacity = '0';
+  setTimeout(() => {
+    ci.style.transition = 'none';
+    ci.style.transform = '';
+    ci.style.opacity = '0';
+    renderCard();
+    requestAnimationFrame(() => {
+      ci.style.transition = 'opacity 0.25s ease';
+      ci.style.opacity = '1';
+      setTimeout(() => { ci.style.transition = ''; }, 250);
+    });
+  }, 200);
+
+  updateHeaderStats();
+}
+
+function showResults() {
+  document.getElementById('cardState').style.display = 'none';
+  document.getElementById('resultsState').style.display = 'block';
+  document.getElementById('knownCount').textContent = sessionKnown;
+  document.getElementById('forgotCount').textContent = sessionForgot;
+
+  const pct = Math.round((sessionKnown / sessionCards.length) * 100);
+  let title = 'Отличная работа!';
+  if (pct === 100) title = '🏆 Идеально!';
+  else if (pct >= 80) title = '👏 Отличная работа!';
+  else if (pct >= 50) title = '💪 Хорошее начало!';
+  else title = '📚 Нужно повторить!';
+
+  document.getElementById('resultsTitle').textContent = title;
+  document.getElementById('resultsSub').textContent = `${pct}% правильно — ${sessionCards.length} карточек пройдено`;
+
+  // Update streak
+  const today = new Date().toDateString();
+  if (state.lastStreakDate !== today) {
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    if (state.lastStreakDate === yesterday) state.streak = (state.streak || 0) + 1;
+    else state.streak = 1;
+    state.lastStreakDate = today;
+  }
+  state.lastStudied = today;
+  saveState();
+  updateHeaderStats();
+}
+
+function repeatWrong() {
+  if (!wrongCards.length) { backToSelector(); return; }
+  startSession(wrongCards);
+}
+
+function confirmBack() {
+  if (currentIdx === 0 || confirm('Вернуться в меню? Прогресс текущей сессии не сохранится.')) {
+    backToSelector();
+  }
+}
+
+function backToSelector() {
+  document.getElementById('resultsState').style.display = 'none';
+  document.getElementById('cardState').style.display = 'none';
+  document.getElementById('selectorState').style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  VIEWS
+// ═══════════════════════════════════════════════════════════
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'dictionary') renderDict();
+  if (name === 'progress') renderProgress();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DICTIONARY
+// ═══════════════════════════════════════════════════════════
+
+function renderDict() {
+  const q = document.getElementById('dictSearch').value.toLowerCase().trim();
+  const list = document.getElementById('dictList');
+  list.innerHTML = '';
+
+  const filtered = VOCAB.filter(v =>
+    !q || v.en.toLowerCase().includes(q) || v.ru.toLowerCase().includes(q)
+  );
+
+  const bySec = {};
+  filtered.forEach(v => {
+    if (!bySec[v.section]) bySec[v.section] = [];
+    bySec[v.section].push(v);
+  });
+
+  Object.entries(bySec).forEach(([sec, items]) => {
+    const secDiv = document.createElement('div');
+    secDiv.className = 'dict-section';
+    const title = document.createElement('div');
+    title.className = 'dict-section-title';
+    title.textContent = sec;
+    secDiv.appendChild(title);
+    items.forEach(v => {
+      const item = document.createElement('div');
+      item.className = 'dict-item';
+      const knownLevel = state.known[v.id] || 0;
+      const dot = knownLevel >= 2 ? '🟢' : knownLevel === 1 ? '🟡' : '🔴';
+      item.innerHTML = `<div class="dict-en">${dot} ${v.en}</div><div class="dict-ru">${v.ru}</div>`;
+      secDiv.appendChild(item);
+    });
+    list.appendChild(secDiv);
+  });
+
+  if (!filtered.length) {
+    list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px;">Ничего не найдено</div>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PROGRESS
+// ═══════════════════════════════════════════════════════════
+
+function renderProgress() {
+  const known = VOCAB.filter(v => (state.known[v.id] || 0) >= 2).length;
+  const pct = Math.round((known / VOCAB.length) * 100);
+  document.getElementById('progressPercent').textContent = pct + '%';
+
+  const container = document.getElementById('progressSections');
+  container.innerHTML = '';
+
+  sections.forEach(sec => {
+    const words = VOCAB.filter(v => v.section === sec);
+    const secKnown = words.filter(v => (state.known[v.id] || 0) >= 2).length;
+    const secPct = Math.round((secKnown / words.length) * 100);
+
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:10px;';
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:0.82rem;">${sec}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--muted);">${secKnown}/${words.length}</span>
+      </div>
+      <div style="height:4px;background:var(--border);border-radius:2px;">
+        <div style="height:100%;width:${secPct}%;background:${secPct===100?'var(--success)':'var(--accent)'};border-radius:2px;transition:width 0.5s ease;"></div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+
+  updateHeaderStats();
+}
+
+function updateHeaderStats() {
+  const known = VOCAB.filter(v => (state.known[v.id] || 0) >= 2).length;
+  document.getElementById('totalLearned').textContent = known;
+  document.getElementById('streakCount').textContent = state.streak || 0;
+}
+
+function resetProgress() {
+  if (!confirm('Сбросить весь прогресс? Это действие необратимо.')) return;
+  state = { known: {}, lastStudied: null, streak: 0, lastStreakDate: null };
+  saveState();
+  renderProgress();
+  updateHeaderStats();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  KEYBOARD
+// ═══════════════════════════════════════════════════════════
+
+document.addEventListener('keydown', e => {
+  if (document.getElementById('cardState').style.display !== 'block') return;
+  if (e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); flipCard(); }
+  if (!isFlipped) return;
+  if (e.key === 'ArrowRight' || e.key === '1') answer(true);
+  if (e.key === 'ArrowLeft' || e.key === '2') answer(false);
+});
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+
+buildSectionGrid();
+updateHeaderStats();
+</script>
+</body>
+</html>
